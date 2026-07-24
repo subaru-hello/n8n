@@ -4,7 +4,7 @@ import type { WorkflowSubWorkflowRequirement } from '../workflow.types';
 /**
  * Replaces `callerId` references on workflow import based on the passed bindings
  *
- * CallerId's are not definied in requiremenets so nothing to extract
+ * CallerId's are not defined in requirements so nothing to extract
  */
 export const callerIdsReference: EntityReference<WorkflowSubWorkflowRequirement> = {
 	extract() {
