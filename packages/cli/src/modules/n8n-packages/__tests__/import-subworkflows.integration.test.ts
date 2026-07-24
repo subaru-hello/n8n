@@ -14,7 +14,8 @@ import {
 	DataTableMissingMode,
 	DataTableSchemaConflictPolicy,
 	FolderConflictPolicy,
-	VariableMissingPolicy,
+	MissingNodeTypeMode,
+	VariableMissingMode,
 	WorkflowConflictPolicy,
 	WorkflowIdPolicy,
 	WorkflowPublishingPolicy,
@@ -39,11 +40,12 @@ async function importPackage(params: ImportPackageParams) {
 		workflowConflictPolicy: WorkflowConflictPolicy.Fail,
 		workflowPublishingPolicy: WorkflowPublishingPolicy.PreservePublishedState,
 		workflowIdPolicy: WorkflowIdPolicy.New,
+		missingNodeTypeMode: MissingNodeTypeMode.Fail,
 		folderConflictPolicy: FolderConflictPolicy.Merge,
 		dataTableMatchingMode: DataTableMatchingMode.ById,
 		dataTableMissingMode: DataTableMissingMode.Create,
 		dataTableSchemaConflictPolicy: DataTableSchemaConflictPolicy.KeepExisting,
-		variableMissingPolicy: VariableMissingPolicy.DoNothing,
+		variableMissingMode: VariableMissingMode.DoNothing,
 		...params,
 	});
 }

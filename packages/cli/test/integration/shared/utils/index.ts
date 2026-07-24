@@ -124,6 +124,12 @@ function buildDefaultNodes(): INodeTypeData {
 			} as never) as INodeType,
 			sourcePath: '',
 		},
+		'n8n-nodes-base.executeWorkflow': {
+			type: mock<INodeType>({
+				description: { name: 'n8n-nodes-base.executeWorkflow', version: 1 },
+			} as never) as INodeType,
+			sourcePath: '',
+		},
 	};
 }
 
