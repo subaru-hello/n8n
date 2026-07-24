@@ -1,6 +1,6 @@
 import type { INode } from 'n8n-workflow';
 
-import { getStaticSubworkflowId } from '../static-sub-workflow-id';
+import { getStaticSubworkflowId, setStaticSubworkflowId } from '../static-sub-workflow-id';
 
 function node(
 	type: string,
@@ -148,5 +148,20 @@ describe('getStaticSubworkflowId', () => {
 		expect(
 			getStaticSubworkflowId(node('n8n-nodes-base.set', 1, { workflowId: 'wf-child' })),
 		).toBeUndefined();
+	});
+});
+
+describe('setStaticSubworkflowId', () => {
+	it('writes back to a resource-locator value', () => {
+		const n = node(EXECUTE_WORKFLOW, 1.2, { workflowId: resourceLocator('wf-old', 'id') });
+		setStaticSubworkflowId(n, 'wf-new');
+		expect(n.parameters.workflowId).toEqual({ __rl: true, mode: 'id', value: 'wf-new' });
+		expect(getStaticSubworkflowId(n)).toBe('wf-new');
+	});
+
+	it('writes back to a legacy plain-string workflowId', () => {
+		const n = node(EXECUTE_WORKFLOW, 1, { workflowId: 'wf-old' });
+		setStaticSubworkflowId(n, 'wf-new');
+		expect(n.parameters.workflowId).toBe('wf-new');
 	});
 });

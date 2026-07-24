@@ -1,6 +1,5 @@
 import { WorkflowEntity } from '@n8n/db';
 import { Service } from '@n8n/di';
-import { isNodeWithWorkflowSelector, isResourceLocatorValue } from 'n8n-workflow';
 
 import { WorkflowCreationService } from '@/workflows/workflow-creation.service';
 import { WorkflowService } from '@/workflows/workflow.service';
@@ -24,6 +23,7 @@ import type {
 	WorkflowPlannedAction,
 } from './workflow-import.types';
 import { WorkflowPublisher } from './workflow-publisher';
+import { workflowReferences } from './workflow-reference';
 import type {
 	ImportBindingMap,
 	ImportContext,
@@ -242,7 +242,7 @@ function prepareEntityForPersist(
 		...(decidedId !== undefined ? { id: decidedId } : {}),
 	});
 	applyCredentialBindingsInPlace(entity, bindings.credentials);
-	applySubWorkflowBindingsInPlace(entity, bindings.workflows);
+	for (const reference of workflowReferences) reference.apply(entity, bindings.workflows);
 	remapErrorWorkflowInPlace(entity, bindings.workflows);
 	remapCallerIdsInPlace(entity, bindings.workflows);
 	return entity;
@@ -261,28 +261,6 @@ function applyCredentialBindingsInPlace(
 			if (targetId) {
 				details.id = targetId;
 			}
-		}
-	}
-}
-
-/**
- * Rewrites each workflow-selector node's referenced sub-workflow id (Execute Workflow,
- * Workflow Tool, Retriever) to its imported target id. Handles both the resource-locator
- * form and the legacy plain-string `workflowId`; ids outside the package are left as-is.
- */
-function applySubWorkflowBindingsInPlace(
-	entity: WorkflowEntity,
-	workflowBindings: ImportBindingMap,
-): void {
-	for (const node of entity.nodes) {
-		if (!isNodeWithWorkflowSelector(node)) continue;
-
-		const { workflowId } = node.parameters;
-		if (isResourceLocatorValue(workflowId) && typeof workflowId.value === 'string') {
-			workflowId.value = workflowBindings.get(workflowId.value) ?? workflowId.value;
-		} else if (typeof workflowId === 'string') {
-			// Legacy node versions store the referenced id as a plain string.
-			node.parameters.workflowId = workflowBindings.get(workflowId) ?? workflowId;
 		}
 	}
 }

@@ -1,4 +1,9 @@
-import { getSubworkflowId, isNodeWithWorkflowSelector, type INode } from 'n8n-workflow';
+import {
+	getSubworkflowId,
+	isNodeWithWorkflowSelector,
+	isResourceLocatorValue,
+	type INode,
+} from 'n8n-workflow';
 
 /**
  * Extract workflow id from a node that references a sub-workflow.
@@ -20,6 +25,20 @@ export function getStaticSubworkflowId(node: INode): string | undefined {
 	const workflowId = getSubworkflowId(node) ?? storedWorkflowId;
 
 	return toStaticId(workflowId);
+}
+
+/**
+ * Writes `workflowId` back to the same location {@link getStaticSubworkflowId} reads from:
+ * the resource-locator `value` for newer nodes, or the plain-string param for legacy ones.
+ * Intended to be called only for nodes where `getStaticSubworkflowId` returned an id.
+ */
+export function setStaticSubworkflowId(node: INode, workflowId: string): void {
+	const stored = node.parameters.workflowId;
+	if (isResourceLocatorValue(stored)) {
+		stored.value = workflowId;
+	} else {
+		node.parameters.workflowId = workflowId;
+	}
 }
 
 function toStaticId(value: unknown): string | undefined {
