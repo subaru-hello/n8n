@@ -62,6 +62,7 @@ describe('package export command', () => {
 			workflowIds: ['wf-1', 'wf-2'],
 			folderIds: [],
 			includeVariableValues: true,
+			includeTags: true,
 			missingWorkflowDependencyPolicy: 'fail',
 		});
 		expect(mockedWriteFileSync).toHaveBeenCalledWith('/tmp/team.n8np', Buffer.from([1, 2, 3]));
@@ -79,6 +80,7 @@ describe('package export command', () => {
 			workflowIds: [],
 			folderIds: ['fld-1'],
 			includeVariableValues: true,
+			includeTags: true,
 			missingWorkflowDependencyPolicy: 'fail',
 		});
 		expect(mockedWriteFileSync).toHaveBeenCalledWith('/tmp/folders.n8np', Buffer.from([1, 2, 3]));
@@ -97,6 +99,7 @@ describe('package export command', () => {
 			workflowIds: ['wf-1'],
 			folderIds: ['fld-1'],
 			includeVariableValues: true,
+			includeTags: true,
 			missingWorkflowDependencyPolicy: 'fail',
 		});
 	});
@@ -115,6 +118,7 @@ describe('package export command', () => {
 			workflowIds: ['wf-1'],
 			folderIds: ['fld-1'],
 			includeVariableValues: true,
+			includeTags: true,
 			missingWorkflowDependencyPolicy: 'reference-only',
 		});
 	});
@@ -130,6 +134,7 @@ describe('package export command', () => {
 		expect(exportPackage).toHaveBeenCalledWith({
 			projectIds: ['proj-1', 'proj-2'],
 			includeVariableValues: true,
+			includeTags: true,
 			missingWorkflowDependencyPolicy: 'fail',
 		});
 		expect(mockedWriteFileSync).toHaveBeenCalledWith('/tmp/projects.n8np', Buffer.from([1, 2, 3]));
@@ -147,6 +152,7 @@ describe('package export command', () => {
 		expect(exportPackage).toHaveBeenCalledWith({
 			projectIds: ['proj-1'],
 			includeVariableValues: true,
+			includeTags: true,
 			missingWorkflowDependencyPolicy: 'include-in-package',
 		});
 	});
@@ -164,6 +170,7 @@ describe('package export command', () => {
 			workflowIds: ['wf-1'],
 			folderIds: [],
 			includeVariableValues: false,
+			includeTags: true,
 			missingWorkflowDependencyPolicy: 'fail',
 		});
 	});
@@ -180,6 +187,7 @@ describe('package export command', () => {
 		expect(exportPackage).toHaveBeenCalledWith({
 			projectIds: ['proj-1'],
 			includeVariableValues: false,
+			includeTags: true,
 			missingWorkflowDependencyPolicy: 'fail',
 		});
 	});
@@ -219,7 +227,7 @@ describe('package export command', () => {
 		});
 	});
 
-	it('maps an explicit --include-tags=true to an omitted request field', async () => {
+	it('treats an explicit --include-tags=true like the default', async () => {
 		const { command, exportPackage } = stubCommand({
 			workflowId: ['wf-1'],
 			output: '/tmp/export.n8np',
@@ -228,8 +236,13 @@ describe('package export command', () => {
 
 		await command.run();
 
-		const fields = exportPackage.mock.calls[0][0] as { includeTags?: boolean };
-		expect(fields.includeTags).toBeUndefined();
+		expect(exportPackage).toHaveBeenCalledWith({
+			workflowIds: ['wf-1'],
+			folderIds: [],
+			includeVariableValues: true,
+			includeTags: true,
+			missingWorkflowDependencyPolicy: 'fail',
+		});
 	});
 
 	it('declares the includeTags flag with its alias, options, and default', () => {
@@ -252,6 +265,7 @@ describe('package export command', () => {
 			workflowIds: ['wf-1'],
 			folderIds: [],
 			includeVariableValues: true,
+			includeTags: true,
 			missingWorkflowDependencyPolicy: 'fail',
 		});
 	});
