@@ -146,9 +146,6 @@ export class WorkflowImporter {
 		plan: WorkflowImportPlan,
 		bindings: PackageImportBindings,
 	): Promise<WorkflowImportResult> {
-		// Resolve the full source→target id map from the plan before writing, so sub-workflow
-		// references resolve regardless of import order or cycles. `bindings.workflows` may
-		// already carry ids from other scopes (a project package seeds the package-wide map).
 		const workflowBindings = new Map([
 			...bindings.workflows,
 			...collectPlannedWorkflowBindings(plan.items),
@@ -225,12 +222,10 @@ export class WorkflowImporter {
 	}
 }
 
-/** The id an applied plan item resolves to, known before anything is written. */
 function planItemTargetId(item: WorkflowPlanItem): string {
 	return item.action === 'create' ? item.decidedId : item.existing.id;
 }
 
-/** Source→target id map for a batch of planned items, known before any write. */
 export function collectPlannedWorkflowBindings(items: WorkflowPlanItem[]): ImportBindingMap {
 	return new Map(items.map((item) => [item.sourceWorkflowId, planItemTargetId(item)]));
 }
@@ -248,6 +243,7 @@ function prepareEntityForPersist(
 	});
 	applyCredentialBindingsInPlace(entity, bindings.credentials);
 	applySubWorkflowBindingsInPlace(entity, bindings.workflows);
+	remapErrorWorkflowInPlace(entity, bindings.workflows);
 	remapCallerIdsInPlace(entity, bindings.workflows);
 	return entity;
 }
@@ -269,7 +265,11 @@ function applyCredentialBindingsInPlace(
 	}
 }
 
-/** Rewrites each workflow-selector node's referenced sub-workflow id to its imported target id. */
+/**
+ * Rewrites each workflow-selector node's referenced sub-workflow id (Execute Workflow,
+ * Workflow Tool, Retriever) to its imported target id. Handles both the resource-locator
+ * form and the legacy plain-string `workflowId`; ids outside the package are left as-is.
+ */
 function applySubWorkflowBindingsInPlace(
 	entity: WorkflowEntity,
 	workflowBindings: ImportBindingMap,
@@ -277,14 +277,32 @@ function applySubWorkflowBindingsInPlace(
 	for (const node of entity.nodes) {
 		if (!isNodeWithWorkflowSelector(node)) continue;
 
-		const workflowId = node.parameters.workflowId;
-		if (!isResourceLocatorValue(workflowId) || typeof workflowId.value !== 'string') continue;
-
-		const targetId = workflowBindings.get(workflowId.value);
-		if (targetId) {
-			workflowId.value = targetId;
+		const { workflowId } = node.parameters;
+		if (isResourceLocatorValue(workflowId) && typeof workflowId.value === 'string') {
+			workflowId.value = workflowBindings.get(workflowId.value) ?? workflowId.value;
+		} else if (typeof workflowId === 'string') {
+			// Legacy node versions store the referenced id as a plain string.
+			node.parameters.workflowId = workflowBindings.get(workflowId) ?? workflowId;
 		}
 	}
+}
+
+/**
+ * Rewrites `settings.errorWorkflow` (the workflow run on error) from the source id to its
+ * imported target id. The `DEFAULT` sentinel and expressions are left as-is, as is an id
+ * for a workflow outside the package.
+ */
+function remapErrorWorkflowInPlace(
+	entity: WorkflowEntity,
+	workflowBindings: ImportBindingMap,
+): void {
+	const { settings } = entity;
+	if (!settings?.errorWorkflow || typeof settings.errorWorkflow !== 'string') return;
+
+	const errorWorkflow = settings.errorWorkflow;
+	if (errorWorkflow === 'DEFAULT' || errorWorkflow.startsWith('=')) return;
+
+	settings.errorWorkflow = workflowBindings.get(errorWorkflow) ?? errorWorkflow;
 }
 
 /**

@@ -172,6 +172,30 @@ describe('Package import of workflows with sub-workflows', () => {
 		expect(importedSub.settings?.callerPolicy).toBe('workflowsFromAList');
 	});
 
+	it('remaps `settings.errorWorkflow` to the imported id under the `new` policy', async () => {
+		const owner = await createOwner();
+
+		// The main workflow runs BRIE as its error workflow.
+		const main = serializedWorkflow({
+			id: 'CHEDDAR',
+			name: 'Main',
+			settings: { errorWorkflow: 'BRIE' },
+		});
+		const errorHandler = serializedWorkflow({ id: 'BRIE', name: 'Error handler' });
+
+		const result = await importPackage({
+			user: owner,
+			packageBuffer: await buildSubWorkflowPackage([main, errorHandler]),
+			workflowIdPolicy: WorkflowIdPolicy.New,
+		});
+
+		const importedMain = await findImported(result, 'CHEDDAR');
+		const importedError = await findImported(result, 'BRIE');
+
+		expect(importedError.id).not.toBe('BRIE');
+		expect(importedMain.settings?.errorWorkflow).toBe(importedError.id);
+	});
+
 	it('does not crash when a package carries a non-string settings.callerIds', async () => {
 		const owner = await createOwner();
 

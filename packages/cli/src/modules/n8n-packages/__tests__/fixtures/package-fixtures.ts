@@ -120,35 +120,49 @@ export function serializedWorkflowWithSubWorkflow(options: {
 	});
 }
 
-/** Builds manifest sub-workflow requirements from Execute Workflow node refs (simulates export). */
+/**
+ * Builds manifest workflow requirements from each workflow's sub-workflow node refs and
+ * `settings.errorWorkflow` (simulates export — mirrors `WorkflowRequirementsExtractor`).
+ */
 export function workflowRequirementsFromWorkflows(
 	workflows: SerializedWorkflow[],
 ): PackageWorkflowRequirement[] {
 	const nameById = new Map(workflows.map((workflow) => [workflow.id, workflow.name]));
 	const byId = new Map<string, PackageWorkflowRequirement>();
 
-	for (const workflow of workflows) {
-		for (const node of workflow.nodes) {
-			const referencedId = getSubworkflowId(node as INode);
-			if (!referencedId) continue;
-
-			const existing = byId.get(referencedId);
-			if (existing) {
-				if (!existing.usedByWorkflows.includes(workflow.id)) {
-					existing.usedByWorkflows.push(workflow.id);
-				}
-				continue;
-			}
-
-			byId.set(referencedId, {
-				id: referencedId,
-				name: nameById.get(referencedId) ?? referencedId,
-				usedByWorkflows: [workflow.id],
-			});
+	const addRequirement = (referencedId: string | undefined, workflowId: string) => {
+		if (!referencedId) return;
+		const existing = byId.get(referencedId);
+		if (existing) {
+			if (!existing.usedByWorkflows.includes(workflowId)) existing.usedByWorkflows.push(workflowId);
+			return;
 		}
+		byId.set(referencedId, {
+			id: referencedId,
+			name: nameById.get(referencedId) ?? referencedId,
+			usedByWorkflows: [workflowId],
+		});
+	};
+
+	for (const workflow of workflows) {
+		for (const node of workflow.nodes) addRequirement(getSubworkflowId(node as INode), workflow.id);
+		addRequirement(errorWorkflowRef(workflow), workflow.id);
 	}
 
 	return [...byId.values()];
+}
+
+/** Static `settings.errorWorkflow` id referenced by a workflow, if any (mirrors the exporter). */
+function errorWorkflowRef(workflow: SerializedWorkflow): string | undefined {
+	const errorWorkflow = workflow.settings?.errorWorkflow;
+	if (
+		typeof errorWorkflow !== 'string' ||
+		errorWorkflow === 'DEFAULT' ||
+		errorWorkflow.startsWith('=')
+	) {
+		return undefined;
+	}
+	return errorWorkflow;
 }
 
 /** Returns the id the workflow's Execute Sub-workflow node points at. */
