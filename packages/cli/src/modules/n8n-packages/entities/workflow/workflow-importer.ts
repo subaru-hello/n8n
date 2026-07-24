@@ -4,6 +4,7 @@ import { Service } from '@n8n/di';
 import { WorkflowCreationService } from '@/workflows/workflow-creation.service';
 import { WorkflowService } from '@/workflows/workflow.service';
 
+import { workflowReferences } from './references';
 import { orderBySubWorkflowDependencies } from './sub-workflow-ordering';
 import { decideWorkflowConflictAction } from './workflow-conflict-policy';
 import { decideWorkflowId } from './workflow-id-policy';
@@ -23,7 +24,6 @@ import type {
 	WorkflowPlannedAction,
 } from './workflow-import.types';
 import { WorkflowPublisher } from './workflow-publisher';
-import { workflowReferences } from './workflow-reference';
 import type {
 	ImportBindingMap,
 	ImportContext,
@@ -242,9 +242,7 @@ function prepareEntityForPersist(
 		...(decidedId !== undefined ? { id: decidedId } : {}),
 	});
 	applyCredentialBindingsInPlace(entity, bindings.credentials);
-	for (const reference of workflowReferences) reference.apply(entity, bindings.workflows);
-	remapErrorWorkflowInPlace(entity, bindings.workflows);
-	remapCallerIdsInPlace(entity, bindings.workflows);
+	for (const reference of workflowReferences) reference.apply(entity, bindings);
 	return entity;
 }
 
@@ -263,41 +261,6 @@ function applyCredentialBindingsInPlace(
 			}
 		}
 	}
-}
-
-/**
- * Rewrites `settings.errorWorkflow` (the workflow run on error) from the source id to its
- * imported target id. The `DEFAULT` sentinel and expressions are left as-is, as is an id
- * for a workflow outside the package.
- */
-function remapErrorWorkflowInPlace(
-	entity: WorkflowEntity,
-	workflowBindings: ImportBindingMap,
-): void {
-	const { settings } = entity;
-	if (!settings?.errorWorkflow || typeof settings.errorWorkflow !== 'string') return;
-
-	const errorWorkflow = settings.errorWorkflow;
-	if (errorWorkflow === 'DEFAULT' || errorWorkflow.startsWith('=')) return;
-
-	settings.errorWorkflow = workflowBindings.get(errorWorkflow) ?? errorWorkflow;
-}
-
-/**
- * `settings.callerIds` is a comma-separated allowlist of workflow ids allowed to call this
- * workflow. Remap each through the binding map; ids outside the package are left as-is.
- */
-function remapCallerIdsInPlace(entity: WorkflowEntity, workflowBindings: ImportBindingMap): void {
-	const { settings } = entity;
-	// settings is opaque at the schema level, so a non-string callerIds would crash `.split`.
-	if (!settings?.callerIds || typeof settings.callerIds !== 'string') return;
-
-	settings.callerIds = settings.callerIds
-		.split(',')
-		.map((raw) => raw.trim())
-		.filter((id) => id !== '')
-		.map((id) => workflowBindings.get(id) ?? id)
-		.join(',');
 }
 
 function toPlanItem(

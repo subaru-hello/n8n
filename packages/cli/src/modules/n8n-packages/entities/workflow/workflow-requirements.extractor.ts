@@ -1,9 +1,9 @@
 import type { WorkflowEntity } from '@n8n/db';
 import { Service } from '@n8n/di';
 
-import type { RequirementsExtractor } from '../requirements-extractor';
-import { workflowReferences } from './workflow-reference';
+import { workflowReferences } from './references';
 import type { WorkflowSubWorkflowRequirement } from './workflow.types';
+import type { RequirementsExtractor } from '../requirements-extractor';
 
 @Service()
 export class WorkflowRequirementsExtractor
@@ -12,36 +12,14 @@ export class WorkflowRequirementsExtractor
 	extract(workflow: WorkflowEntity): WorkflowSubWorkflowRequirement[] {
 		const byId = new Map<string, WorkflowSubWorkflowRequirement>();
 
-		const addRequirement = (referencedWorkflowId: string | undefined) => {
-			if (!referencedWorkflowId || byId.has(referencedWorkflowId)) return;
-
-			byId.set(referencedWorkflowId, {
-				workflowId: workflow.id,
-				referencedWorkflowId,
-			});
-		};
-
 		for (const reference of workflowReferences) {
-			for (const referencedWorkflowId of reference.extract(workflow)) {
-				addRequirement(referencedWorkflowId);
+			for (const requirement of reference.extract(workflow)) {
+				if (!byId.has(requirement.referencedWorkflowId)) {
+					byId.set(requirement.referencedWorkflowId, requirement);
+				}
 			}
 		}
 
-		addRequirement(this.getErrorWorkflowId(workflow));
-
 		return [...byId.values()];
-	}
-
-	private getErrorWorkflowId(workflow: WorkflowEntity): string | undefined {
-		const errorWorkflow = workflow.settings?.errorWorkflow;
-
-		// Only a static id is a workflow dependency. `DEFAULT` is a sentinel, and an
-		// expression (e.g. `={{ $vars.ERROR_WORKFLOW_ID }}`) is a variable dependency
-		// handled by the variable extractor, not a concrete referenced workflow.
-		if (!errorWorkflow || errorWorkflow === 'DEFAULT' || errorWorkflow.startsWith('=')) {
-			return undefined;
-		}
-
-		return errorWorkflow;
 	}
 }
