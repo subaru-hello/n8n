@@ -85,7 +85,7 @@ export class WorkflowPackageImporter {
 
 		const variableRequest: VariableImportRequest = {
 			requirements: identifyRequirements(manifest.requirements?.variables, workflows),
-			missingPolicy: request.variableMissingPolicy,
+			missingMode: request.variableMissingMode,
 		};
 
 		const imported = await this.importOrchestrator.import({
@@ -117,7 +117,7 @@ export class WorkflowPackageImporter {
 			},
 			variables: {
 				matched: imported.variablePlan.matched,
-				missing: imported.variablePlan.missing,
+				missing: imported.variablePlan.missing.map(({ name }) => name),
 			},
 		});
 	}
