@@ -1,11 +1,8 @@
 import type { PackageWorkflowRequirement } from '../../spec/requirements.schema';
 
 /**
- * Orders workflows so each sub-workflow is placed before the workflows that call it,
- * using the manifest's `requirements.workflows` graph (Kahn's topological sort). Ids
- * not present in `workflows` are ignored; cycles (including self-references) are
- * tolerated by appending their members in the original relative order.
- */
+ * Sort workflows so we import from "lowest" to "highest"
+ **/
 export function orderBySubWorkflowDependencies<T extends { sourceWorkflowId: string }>(
 	workflows: T[],
 	requirements: PackageWorkflowRequirement[] | undefined,

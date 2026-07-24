@@ -122,7 +122,7 @@ export function serializedWorkflowWithSubWorkflow(options: {
 
 /**
  * Builds manifest workflow requirements from each workflow's sub-workflow node refs and
- * `settings.errorWorkflow` (simulates export — mirrors `WorkflowRequirementsExtractor`).
+ * `settings.errorWorkflow` (simulates export — mirrors `extractWorkflowRequirements`).
  */
 export function workflowRequirementsFromWorkflows(
 	workflows: SerializedWorkflow[],
